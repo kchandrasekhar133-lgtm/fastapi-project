@@ -5,9 +5,10 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  SONARQUBE_ENDPOINT: 'sonarqube-service-connection'
-  SONARQUBE_PROJECT_KEY: 'simple-fastapi-student-app'
-  SONARQUBE_PROJECT_NAME: 'Simple FastAPI Student App'
+  SONAR_SERVICE_CONNECTION: 'sonarcloud-service-connection'
+  SONAR_ORGANIZATION: 'khandrasekhar'
+  SONAR_PROJECT_KEY: 'khandrasekhar'
+  SONAR_PROJECT_NAME: 'Simple FastAPI Student App'
 
 steps:
 - task: UsePythonVersion@0
@@ -24,15 +25,18 @@ steps:
     python -m py_compile main.py
   displayName: 'Check Python Syntax'
 
-- task: SonarQubePrepare@6
-  displayName: 'Prepare SonarQube analysis'
+- task: SonarCloudPrepare@1
+  displayName: 'Prepare SonarCloud analysis'
   inputs:
-    SonarQube: '$(SONARQUBE_ENDPOINT)'
+    SonarCloud: '$(SONAR_SERVICE_CONNECTION)'
+    organization: '$(SONAR_ORGANIZATION)'
     scannerMode: 'CLI'
     configMode: 'manual'
-    cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
-    cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
-    cliSources: '.'
+    cliProjectKey: '$(SONAR_PROJECT_KEY)'
+    cliProjectName: '$(SONAR_PROJECT_NAME)'
+    extraProperties: |
+      sonar.sources=.
+      sonar.python.version=3.12
 
 - script: |
     python -m pip install coverage
@@ -40,11 +44,11 @@ steps:
   displayName: 'Run tests for coverage'
   condition: succeededOrFailed()
 
-- task: SonarQubeAnalyze@6
-  displayName: 'Run SonarQube analysis'
+- task: SonarCloudAnalyze@1
+  displayName: 'Run SonarCloud analysis'
 
-- task: SonarQubePublish@6
-  displayName: 'Publish SonarQube results'
+- task: SonarCloudPublish@1
+  displayName: 'Publish SonarCloud results'
 
 - script: |
     timeout 15s python -m uvicorn main:app --host 0.0.0.0 --port 8000 || true
