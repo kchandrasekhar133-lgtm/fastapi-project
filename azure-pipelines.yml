@@ -4,9 +4,14 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
+variables:
+  SONARQUBE_ENDPOINT: 'sonarqube-service-connection'
+  SONARQUBE_PROJECT_KEY: 'simple-fastapi-student-app'
+  SONARQUBE_PROJECT_NAME: 'Simple FastAPI Student App'
 
+steps:
 - task: UsePythonVersion@0
+  displayName: 'Use Python 3.12'
   inputs:
     versionSpec: '3.12'
 
@@ -19,6 +24,28 @@ steps:
     python -m py_compile main.py
   displayName: 'Check Python Syntax'
 
+- task: SonarQubePrepare@6
+  displayName: 'Prepare SonarQube analysis'
+  inputs:
+    SonarQube: '$(SONARQUBE_ENDPOINT)'
+    scannerMode: 'CLI'
+    configMode: 'manual'
+    cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
+    cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
+    cliSources: '.'
+
+- script: |
+    python -m pip install coverage
+    coverage run -m pytest || true
+  displayName: 'Run tests for coverage'
+  condition: succeededOrFailed()
+
+- task: SonarQubeAnalyze@6
+  displayName: 'Run SonarQube analysis'
+
+- task: SonarQubePublish@6
+  displayName: 'Publish SonarQube results'
+
 - script: |
     timeout 15s python -m uvicorn main:app --host 0.0.0.0 --port 8000 || true
-  displayName: 'Start FastAPI Application'  
+  displayName: 'Start FastAPI Application'
